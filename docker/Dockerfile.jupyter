@@ -1,0 +1,73 @@
+# Jupyter Notebook with SPAdes GPU Support
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV JUPYTER_ENABLE_LAB=yes
+ENV JUPYTER_TOKEN=spades-gpu-token
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
+    build-essential \
+    git \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Jupyter and scientific packages
+RUN pip3 install --no-cache-dir \
+    jupyter \
+    jupyterlab \
+    notebook \
+    numpy \
+    pandas \
+    matplotlib \
+    seaborn \
+    plotly \
+    scipy \
+    scikit-learn \
+    biopython \
+    pycuda \
+    cupy-cuda12x
+
+# Install additional bioinformatics tools
+RUN pip3 install --no-cache-dir \
+    pysam \
+    screed \
+    khmer
+
+# Create jupyter user
+RUN useradd -m -s /bin/bash jovyan && \
+    mkdir -p /home/jovyan/work && \
+    chown -R jovyan:jovyan /home/jovyan
+
+# Copy SPAdes installation (if building from SPAdes image)
+# This would be done via multi-stage build in practice
+COPY --from=spades:gpu-latest /opt/spades/install /opt/spades/install
+
+# Set PATH to include SPAdes
+ENV PATH=/opt/spades/install/bin:${PATH}
+ENV PYTHONPATH=/opt/spades/install/share/spades
+
+# Switch to jupyter user
+USER jovyan
+WORKDIR /home/jovyan
+
+# Create example notebooks directory
+RUN mkdir -p /home/jovyan/work/examples
+
+# Copy example notebooks
+COPY --chown=jovyan:jovyan docker/notebooks/ /home/jovyan/work/examples/
+
+# GPU environment setup
+ENV SPADES_GPU_SUPPORT=1
+ENV NVIDIA_VISIBLE_DEVICES=all
+
+# Expose Jupyter port
+EXPOSE 8888
+
+# Start Jupyter Lab
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=spades-gpu-token"] 

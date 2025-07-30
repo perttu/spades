@@ -1,0 +1,21 @@
+############################################################################
+# Copyright (c) 2023-2024 SPAdes team
+# Copyright (c) 2015-2022 Saint Petersburg State University
+# Copyright (c) 2011-2014 Saint Petersburg Academic University
+# All Rights Reserved
+# See file LICENSE for details.
+############################################################################
+
+if (SPADES_BUILD_INTERNAL)
+  add_subdirectory(test/include_test)
+  add_subdirectory(test/debruijn)
+  add_subdirectory(test/examples)
+  add_subdirectory(test/adt)
+  add_subdirectory(test/mpi)
+else()
+  add_subdirectory(test/include_test EXCLUDE_FROM_ALL)
+  add_subdirectory(test/debruijn EXCLUDE_FROM_ALL)
+  add_subdirectory(test/mpi EXCLUDE_FROM_ALL)
+  add_subdirectory(test/adt EXCLUDE_FROM_ALL)
+  add_subdirectory(test/examples EXCLUDE_FROM_ALL)
+endif()

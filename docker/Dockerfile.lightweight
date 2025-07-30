@@ -1,0 +1,94 @@
+# SPAdes with GPU Support - Lightweight Dockerfile
+# Single-stage build for faster development and testing
+
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:/opt/spades/install/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV PYTHONPATH=/opt/spades/install/share/spades
+
+# Install all dependencies in one layer to minimize space usage
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    curl \
+    python3 \
+    python3-pip \
+    python3-dev \
+    libbz2-dev \
+    zlib1g-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    liblzma-dev \
+    libssl-dev \
+    libffi-dev \
+    pkg-config \
+    autoconf \
+    automake \
+    libtool \
+    make \
+    g++ \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install minimal Python dependencies
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir numpy matplotlib setuptools wheel && \
+    rm -rf ~/.cache/pip
+
+# Create working directory
+WORKDIR /opt/spades
+
+# Copy only source code (use .dockerignore to exclude unnecessary files)
+COPY . .
+
+# Build SPAdes with GPU support in one step to minimize layers
+RUN mkdir -p build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release \
+          -DSPADES_GPU_SUPPORT=ON \
+          -DSPADES_CUDA_SUPPORT=ON \
+          -DSPADES_GPU_DEBUG=OFF \
+          -DCMAKE_INSTALL_PREFIX=/opt/spades/install \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda \
+          ../src && \
+    make -j$(nproc) && \
+    make install && \
+    cd .. && rm -rf build && \
+    rm -rf /tmp/* /var/tmp/*
+
+# Create directories and set up user
+RUN mkdir -p /data/{input,output,tmp,config,logs} && \
+    useradd -m -u 1000 spades && \
+    chown -R spades:spades /data /opt/spades && \
+    chmod +x /opt/spades/install/bin/*
+
+# Set default GPU environment
+ENV SPADES_GPU_SUPPORT=1
+ENV SPADES_GPU_STRATEGY=sorted
+ENV SPADES_GPU_BATCH_SIZE=1000000
+ENV SPADES_GPU_MEMORY_FRACTION=0.8
+
+# Switch to non-root user
+USER spades
+WORKDIR /data
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import sys; sys.path.append('/opt/spades/install/share/spades'); print('SPAdes ready')" || exit 1
+
+# Default command
+CMD ["bash", "-c", "echo 'SPAdes GPU Lightweight ready!' && echo 'GPU Status:' && nvidia-smi 2>/dev/null || echo 'No GPU detected' && echo 'Usage: docker run --gpus all -v /path/to/data:/data spades-gpu spades.py --help' && /bin/bash"]
+
+# Labels
+LABEL maintainer="SPAdes Team"
+LABEL description="SPAdes genome assembler with GPU acceleration - Lightweight version"
+LABEL version="4.0.0-gpu-lite"
+LABEL cuda.version="12.4"
+LABEL gpu.support="enabled" 

@@ -1,0 +1,49 @@
+site_name: SPAdes Assembly Toolkit
+
+nav:
+  - Home: index.md
+  - Quick start: getting-started.md
+  - Installation: installation.md
+  - SPAdes input data:
+    - Basic input: input.md
+    - Hybrid assembly: hybrid.md
+    - Tips on the parameters: datatypes.md
+  - Command line options: running.md
+  - SPAdes output: output.md
+  - HMM-guided mode: hmm.md
+  - Transcriptome assembly: rna.md
+  - Running SPAdes across multiple nodes of a cluster: hpc.md
+  - Binning refining: binspreader.md
+  - HMM mapping on assembly graph: pathracer.md
+  - Sequence to graph alignment: spaligner.md
+  - SPAdes tools: standalone.md
+  - Citation: citation.md
+  - Feedback: feedback.md
+
+use_directory_urls: false
+
+theme:
+  name: material
+  logo: spades.png
+  favicon: spades.png
+  palette:
+    primary: white
+  features:
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      use_pygments: true
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+
+plugins:
+  - macros:
+        module_name: docs/getversion
+

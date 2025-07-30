@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  spades-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.lightweight
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: spades:gpu-latest
+    container_name: spades-gpu-container
+    
+    # GPU support configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+    
+    # Environment variables for GPU configuration
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - SPADES_GPU_SUPPORT=1
+      - SPADES_GPU_STRATEGY=sorted
+      - SPADES_GPU_BATCH_SIZE=1000000
+      - SPADES_GPU_MEMORY_FRACTION=0.8
+      - SPADES_GPU_DEBUG=0
+      - CUDA_VISIBLE_DEVICES=all
+      
+    # Volume mounts for data persistence
+    volumes:
+      - ./data/input:/data/input:ro       # Input data (read-only)
+      - ./data/output:/data/output:rw     # Output data (read-write)
+      - ./data/tmp:/data/tmp:rw           # Temporary files (read-write)
+      - ./config:/data/config:ro          # Configuration files (read-only)
+      - ./logs:/data/logs:rw              # Log files (read-write)
+      
+    # Network configuration
+    networks:
+      - spades-network
+      
+    # Resource limits
+    mem_limit: 32g
+    memswap_limit: 32g
+    cpus: '16.0'
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.path.append('/opt/spades/install/share/spades'); import spades"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Monitoring service for GPU usage
+  nvidia-monitoring:
+    image: nvidia/dcgm-exporter:3.1.8-3.1.5-ubuntu20.04
+    container_name: spades-gpu-monitor
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, utility]
+    
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      
+    ports:
+      - "9400:9400"  # DCGM metrics endpoint
+      
+    networks:
+      - spades-network
+      
+    profiles:
+      - monitoring
+    
+    depends_on:
+      - spades-gpu
+
+  # Optional: Jupyter notebook for interactive analysis
+  jupyter-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jupyter
+    image: spades:jupyter-gpu
+    container_name: spades-jupyter-gpu
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute]
+    
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=spades-gpu-token
+      
+    ports:
+      - "8888:8888"
+      
+    volumes:
+      - ./notebooks:/home/jovyan/work:rw
+      - ./data:/home/jovyan/data:rw
+      
+    networks:
+      - spades-network
+      
+    profiles:
+      - jupyter
+      
+    depends_on:
+      - spades-gpu
+
+networks:
+  spades-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  spades-data:
+    driver: local
+  spades-cache:
+    driver: local 

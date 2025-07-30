@@ -1,0 +1,80 @@
+# Exclude build artifacts and temporary files
+build/
+**/build/
+*.o
+*.so
+*.a
+*.out
+
+# Exclude version control
+.git/
+.gitignore
+.gitmodules
+
+# Exclude documentation and examples that aren't needed in container
+docs/
+examples/
+test_data/
+benchmarks/
+
+# Exclude IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Exclude Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.env
+
+# Exclude log files
+*.log
+logs/
+
+# Exclude package manager files
+node_modules/
+*.deb
+*.rpm
+
+# Exclude Docker files from the context (except the ones we need)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile*
+!docker/Dockerfile
+!docker/Dockerfile.*
+
+# Exclude data directories (these should be mounted)
+data/
+input/
+output/
+tmp/
+
+# Exclude configuration that should be mounted
+config/
+*.conf
+
+# Exclude large test files
+*.fastq
+*.fq
+*.fasta
+*.fa
+*.sam
+*.bam
+
+# Exclude CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Exclude other temporary files
+*.tmp
+*.temp
+*.backup
+*.bak 
